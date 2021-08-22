@@ -1,9 +1,9 @@
-package com.paic.util;
+package com.paic.core;
 
 import javax.swing.*;
 import java.awt.*;
 
-public interface SqlGenerator {
+public interface Generator {
 
 
     String generate(String dirPath, String filePath, JLabel label);

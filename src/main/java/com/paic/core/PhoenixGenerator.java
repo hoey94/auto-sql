@@ -1,4 +1,4 @@
-package com.paic.util;
+package com.paic.core;
 
 import cn.hutool.poi.excel.ExcelUtil;
 
@@ -6,7 +6,7 @@ import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PhoenixSqlGenerator implements SqlGenerator {
+public class PhoenixGenerator implements Generator {
 
     public String generate(String dirPath, String filePath, JLabel label) {
         if(label != null){
@@ -98,6 +98,6 @@ public class PhoenixSqlGenerator implements SqlGenerator {
     }
 
     public static void main(String[] args) {
-        System.out.println(new PhoenixSqlGenerator().generate("/Users/zyh/Documents/","hbase.xlsx",null));
+        System.out.println(new PhoenixGenerator().generate("/Users/zyh/Documents/","hbase.xlsx",null));
     }
 }

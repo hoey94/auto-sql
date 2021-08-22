@@ -1,15 +1,17 @@
-package com.paic.util;
+package com.paic.core;
 
-import cn.hutool.poi.excel.ExcelReader;
 import cn.hutool.poi.excel.ExcelUtil;
 
 import javax.swing.*;
-import java.awt.*;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
-public class HbaseSqlGenerator implements SqlGenerator {
+public class HbaseGenerator implements Generator {
 
     public String generate(String dirPath, String filePath, JLabel label) {
+
+
         if(label != null){
             label.setText("开始加载文件:" + dirPath + filePath);
         }
@@ -22,9 +24,15 @@ public class HbaseSqlGenerator implements SqlGenerator {
         int cycNumber = columnClusterList.size()-1;
 
         StringBuffer stringBuffer = new StringBuffer();
+        Set<String> set = new TreeSet<>();
         for (List<Object> objects : dataList) {
             Object rowKeyValue = objects.get(0);
             for (int i = 1; i < cycNumber + 1; i++) {
+                String ccl = columnClusterList.get(i).toString();
+                if(!ccl.equals("PK")){
+                    set.add(ccl.split(":")[0]);
+                }
+
                 // 跳过第一个值，直接从第二个值开始取
                 if(label != null){
                     label.setText("生成值:" + "put '" + tableNameList.get(0) + "','" + rowKeyValue + "','" + columnClusterList.get(i) + "','" + objects.get(i) + "'");
@@ -32,6 +40,21 @@ public class HbaseSqlGenerator implements SqlGenerator {
                 stringBuffer.append("put '" + tableNameList.get(0) + "','" + rowKeyValue + "','" + columnClusterList.get(i) + "','" + objects.get(i) + "'\r\n");
             }
         }
+
+        stringBuffer.append("create '"+tableNameList.get(0)+"',");
+        for(int i = 0 ; i < set.size() ; i++){
+            String s = "";
+            if(i == set.size() - 1){
+                s = "{NAME => '"+set.toArray()[i]+"', VERSIONS => 1}";
+            }else{
+                s = "{NAME => '"+set.toArray()[i]+"', VERSIONS => 1},";
+            }
+            stringBuffer.append(s);
+        }
+
+        // 生成建表语句
+        stringBuffer.append("\n");
+
         if(label != null){
             label.setText("解析成功");
         }
@@ -40,6 +63,6 @@ public class HbaseSqlGenerator implements SqlGenerator {
     }
 
     public static void main(String[] args) {
-        new HbaseSqlGenerator().generate("/Users/zyh/Documents/","hbase.xlsx",null);
+        new HbaseGenerator().generate("/Users/zyh/Documents/","hbase.xlsx",null);
     }
 }
