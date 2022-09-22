@@ -26,7 +26,7 @@ public class KafkaJsonProducter implements Generator {
         StringBuffer sb = new StringBuffer();
 
         for (List<Object> row : dataList) {
-            JSONObject object = new JSONObject();
+            JSONObject object = new JSONObject(true);
             for (int i = 0; i < cols.size(); i++) {
                 Object col = cols.get(i);
                 Object data = row.get(i);

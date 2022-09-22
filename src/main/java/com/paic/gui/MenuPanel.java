@@ -3,11 +3,8 @@ package com.paic.gui;
 import cn.hutool.poi.excel.ExcelReader;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
-import com.paic.core.HbaseGenerator;
-import com.paic.core.KafkaCommaProducter;
-import com.paic.core.KafkaJsonProducter;
+import com.paic.core.*;
 import com.paic.util.Item;
-import com.paic.core.PhoenixGenerator;
 
 import javax.swing.*;
 import java.awt.*;
@@ -95,6 +92,8 @@ public class MenuPanel
         // 添加下载kafka的模板
         exportItems.put(Item.Export.KAFKA.getKey(), new MenuItem(Item.Export.KAFKA.getName()));
 
+        // 添加Hive
+        exportItems.put(Item.Export.HIVE_DDL_AND_DML.getKey(), new MenuItem(Item.Export.HIVE_DDL_AND_DML.getName()));
         initItem(exportMenu, exportItems.values().iterator());
 
 
@@ -106,6 +105,8 @@ public class MenuPanel
         // 添加下载kafka的模板
         importItems.put(Item.Import.KAFKA_COMMA.getKey(), new MenuItem(Item.Import.KAFKA_COMMA.getName()));
         importItems.put(Item.Import.KAFKA_JSON.getKey(), new MenuItem(Item.Import.KAFKA_JSON.getName()));
+
+        importItems.put(Item.Import.HIVE_DDL_AND_DML.getKey(), new MenuItem(Item.Import.HIVE_DDL_AND_DML.getName()));
 
         initItem(importMenu, importItems.values().iterator());
     }
@@ -188,6 +189,11 @@ public class MenuPanel
         parseExl2TxWrapper(Item.Import.KAFKA_JSON.getKey(), KafkaJsonProducter.class, "generate");
         parseExl2TxWrapper(Item.Import.KAFKA_COMMA.getKey(), KafkaCommaProducter.class, "generate");
         // ======== kafka 相关 end =====
+
+        // ======== hive 相关 start =====
+        exportExl2FSWrapper(Item.Export.HIVE_DDL_AND_DML.getKey(), "hiveCols.xlsx","hiveCols.xlsx");
+        parseExl2TxWrapper(Item.Import.HIVE_DDL_AND_DML.getKey(), HiveSqlGenerator.class, "generate");
+        // ======== hive 相关 end =====
 
 
 

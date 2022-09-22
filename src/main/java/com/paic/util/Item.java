@@ -15,7 +15,11 @@ public interface Item {
      */
     @Getter
     enum Import implements Item{
-        HBASE("importHBaseItem", "HBase"),PHOENIX("importPhoenixItem","Phoenix"),KAFKA_COMMA("importKafkaCommaItem","Kafka(comma)"),KAFKA_JSON("importKafkaJsonItem","Kafka(json)");
+        HBASE("importHBaseItem", "HBase"),
+        PHOENIX("importPhoenixItem","Phoenix"),
+        KAFKA_COMMA("importKafkaCommaItem","Kafka(comma)"),
+        KAFKA_JSON("importKafkaJsonItem","Kafka(json)"),
+        HIVE_DDL_AND_DML("importHiveItem","Hive(DDL、DML)");
         private String key;
         private String name;
         private Import(String key, String name){
@@ -27,7 +31,10 @@ public interface Item {
     // 导出文档到磁盘
     @Getter
     enum Export implements Item{
-        HBASE("exportHBaseItem", "HBase"),PHOENIX("exportPhoenixItem","Phoenix"),KAFKA("exportKafkaItem","Kafka");
+        HBASE("exportHBaseItem", "HBase"),
+        PHOENIX("exportPhoenixItem","Phoenix"),
+        KAFKA("exportKafkaItem","Kafka"),
+        HIVE_DDL_AND_DML("exportHiveItem","Hive");
         private String key;
         private String name;
         private Export(String key, String name){
