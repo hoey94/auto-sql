@@ -21,6 +21,9 @@ public class MenuPanel
     private Frame f;
     private MenuBar bar;
     private TextArea ta;
+    private JTextField sourceyu;
+    private JTextField targetyu;
+    private JTextField pks;
     private Menu fileMenu, importMenu,exportMenu;
 
     private Map<String,MenuItem> importItems = new LinkedHashMap<>();
@@ -42,10 +45,14 @@ public class MenuPanel
     public void init()
     {
         f = new Frame("my window");
+
         f.setBounds(300,100,600,300);
+        f.setLayout(new FlowLayout());
 
         bar = new MenuBar();
-
+        sourceyu=new JTextField();
+        targetyu=new JTextField();
+        pks=new JTextField();
         ta = new TextArea();
         fileMenu = new Menu("文件");
         importMenu = new Menu("导入");
@@ -69,13 +76,27 @@ public class MenuPanel
         saveDia = new FileDialog(f,"存储文件",FileDialog.SAVE);
 
 
+
+
+//        sourceyu.setBackground(Color.yellow);
+        sourceyu.setColumns(10);
+        sourceyu.setText("来源域");
+        f.add(BorderLayout.SOUTH,sourceyu);
+//        targetyu.setBackground(Color.red);
+        targetyu.setColumns(10);
+        targetyu.setText("目标域");
+        f.add(BorderLayout.NORTH,targetyu);
+//        pks.setBackground(Color.red);
+        pks.setColumns(20);
+        pks.setText("主键，多个以，分割，带上括号");
+        f.add(BorderLayout.NORTH,pks);
+
+//        jToolBar = new JToolBar();
+//        jToolBarlabel=new JLabel("running");
+//        jToolBar.add(jToolBarlabel);//把标签加到工具栏上
+//        f.add(jToolBar,BorderLayout.SOUTH);
+
         f.add(ta);
-
-        jToolBar = new JToolBar();
-        jToolBarlabel=new JLabel("running");
-        jToolBar.add(jToolBarlabel);//把标签加到工具栏上
-        f.add(jToolBar,BorderLayout.SOUTH);
-
         try {
             myEvent();
         } catch (Exception e) {
@@ -100,13 +121,8 @@ public class MenuPanel
     }
 
     private void initImportItems() {
-        importItems.put(Item.Import.HBASE.getKey(), new MenuItem(Item.Import.HBASE.getName()));
-        importItems.put(Item.Import.PHOENIX.getKey(), new MenuItem(Item.Import.PHOENIX.getName()));
-        // 添加下载kafka的模板
-        importItems.put(Item.Import.KAFKA_COMMA.getKey(), new MenuItem(Item.Import.KAFKA_COMMA.getName()));
-        importItems.put(Item.Import.KAFKA_JSON.getKey(), new MenuItem(Item.Import.KAFKA_JSON.getName()));
 
-        importItems.put(Item.Import.HIVE_DDL_AND_DML.getKey(), new MenuItem(Item.Import.HIVE_DDL_AND_DML.getName()));
+        importItems.put(Item.Import.CK2MYSQL.getKey(), new MenuItem(Item.Import.CK2MYSQL.getName()));
 
         initItem(importMenu, importItems.values().iterator());
     }
@@ -123,6 +139,7 @@ public class MenuPanel
         saveItem.addActionListener(new ActionListener()
         {
 
+            @Override
             public void actionPerformed(ActionEvent e)
             {
                 if(file==null)
@@ -156,6 +173,7 @@ public class MenuPanel
 
         closeItem.addActionListener(new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent e)
             {
                 System.exit(0);
@@ -172,29 +190,9 @@ public class MenuPanel
 
         // ======== 保存关闭 相关 start =====
 
-        // ======== hbase 相关 start =====
-        parseExl2TxWrapper(Item.Import.HBASE.getKey(), HbaseGenerator.class, "generate");
-        exportExl2FSWrapper(Item.Export.HBASE.getKey(),"hbase.xlsx","hbase.xlsx");
-        // ======== hbase 相关 end =====
-
-
-        // ======== phoenix 相关 start =====
-        parseExl2TxWrapper(Item.Import.PHOENIX.getKey(), PhoenixGenerator.class, "generate");
-        exportExl2FSWrapper(Item.Export.PHOENIX.getKey(),"hbase.xlsx","phoenix.xlsx");
-        // ======== phoenix 相关 end =====
-
-
-        // ======== kafka 相关 start =====
-        exportExl2FSWrapper(Item.Export.KAFKA.getKey(), "kafka.xlsx","kafka.xlsx");
-        parseExl2TxWrapper(Item.Import.KAFKA_JSON.getKey(), KafkaJsonProducter.class, "generate");
-        parseExl2TxWrapper(Item.Import.KAFKA_COMMA.getKey(), KafkaCommaProducter.class, "generate");
-        // ======== kafka 相关 end =====
-
         // ======== hive 相关 start =====
-        exportExl2FSWrapper(Item.Export.HIVE_DDL_AND_DML.getKey(), "hiveCols.xlsx","hiveCols.xlsx");
-        parseExl2TxWrapper(Item.Import.HIVE_DDL_AND_DML.getKey(), HiveSqlGenerator.class, "generate");
+        parseSql2TxWrapper(Item.Import.CK2MYSQL.getKey(), CK2MysqlGenerator.class, "generateCK2Mysql");
         // ======== hive 相关 end =====
-
 
 
     }
@@ -203,6 +201,7 @@ public class MenuPanel
     public void exportExl2FSWrapper(String key, String sourceFileFullName, String sinkFileFullName){
         exportItems.get(key).addActionListener(new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent e)
             {
 
@@ -222,10 +221,10 @@ public class MenuPanel
         });
     }
 
-    // 解析Excel输出结果到textArea包装
-    public void parseExl2TxWrapper(String key, Class clazz, String methodName) throws Exception{
+    public void parseSql2TxWrapper(String key, Class clazz, String methodName) throws Exception{
         importItems.get(key).addActionListener(new ActionListener()
         {
+            @Override
             public void actionPerformed(ActionEvent e)
             {
                 try {
@@ -238,8 +237,8 @@ public class MenuPanel
 
                     // 解析文件，生成sql语句
                     Object o = clazz.newInstance();
-                    Method method = clazz.getDeclaredMethod(methodName,String.class, String.class, JLabel.class);
-                    String result = (String)method.invoke(o,new Object[]{dirPath, fileName, jToolBarlabel});
+                    Method method = clazz.getDeclaredMethod(methodName,String[].class, JLabel.class);
+                    String result = (String)method.invoke(o,new Object[]{new String[]{dirPath, fileName, sourceyu.getText(),targetyu.getText(), pks.getText()}, jToolBarlabel});
                     ta.setText(result);
                 } catch (InstantiationException instantiationException) {
                     instantiationException.printStackTrace();

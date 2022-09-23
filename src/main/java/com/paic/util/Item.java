@@ -19,7 +19,8 @@ public interface Item {
         PHOENIX("importPhoenixItem","Phoenix"),
         KAFKA_COMMA("importKafkaCommaItem","Kafka(comma)"),
         KAFKA_JSON("importKafkaJsonItem","Kafka(json)"),
-        HIVE_DDL_AND_DML("importHiveItem","Hive(DDL、DML)");
+        HIVE_DDL_AND_DML("importHiveItem","Hive(DDL、DML)"),
+        CK2MYSQL("ck2mysqlItem","ck2mysql");
         private String key;
         private String name;
         private Import(String key, String name){
