@@ -2,10 +2,8 @@ package com.paic.util;
 
 import cn.hutool.core.util.ObjectUtil;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author zyh
@@ -22,6 +20,7 @@ public class ParseUtil {
         typeMapping.put("STRING", "VARCHAR(255)");
         typeMapping.put("INT", "INT");
         typeMapping.put("DATE", "DATETIME");
+        typeMapping.put("DECIMAL", "DECIMAL(12,2)");
         return typeMapping;
     }
 
@@ -54,19 +53,25 @@ public class ParseUtil {
             if(line.contains("TABLE") || line.contains("VIEW") || ObjectUtil.isEmpty(line)){
                 continue;
             }
-            if(line.length() == 1 || line.toUpperCase().contains("ENGINE")){
+            if(line.length() == 1 ){
                 continue;
             }
-            line = line.replaceAll(",", "");
+            if(line.toUpperCase().contains("ENGINE")){
+                break;
+            }
+            if(line.endsWith("))")){
+                line = line.substring(0,line.length()-1);
+            }
+            if(line.endsWith(",")){
+                line = line.substring(0,line.length()-1);
+            }
             line = line.replaceAll("`", "");
             line = line.replaceAll("\\s{1,}", " ");
 
             if(line.startsWith("(")){
                 line = line.substring(1,line.length());
             }
-            if(line.endsWith("))")){
-                line = line.substring(0,line.length()-1);
-            }
+
             Tuple2<String, String> tuple2 = getTuple2(line);
             // 去掉SIGN和VERSION
             if(tuple2.getA().toUpperCase().equals("SIGN") || tuple2.getA().toUpperCase().equals("VERSION")){
@@ -79,16 +84,26 @@ public class ParseUtil {
 
     private static Tuple2<String, String> getTuple2(String line) {
         String[] s = line.split(" ");
-        return Tuple2.of(s[0], s[1]);
+        StringBuffer sb = new StringBuffer();
+        for (int i = 1; i <s.length ; i++) {
+            sb.append(s[i] + " ");
+        }
+        return Tuple2.of(s[0], sb.toString());
     }
 
-
-    public static String mapping(String type){
+    public static String mapping(Tuple2<String, String> columns, String pks){
+        List<String> pksArr = Arrays.asList(pks.substring(1,pks.length()-1).split(",")).stream().map(String::trim).collect(Collectors.toList());
+        String type = columns.getB().trim();
         String result = type;
         Map<String, String> mappings = getTypeMapping();
         for (Map.Entry<String, String> entry : mappings.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue();
+            if(type.toUpperCase().equals("STRING") && pksArr.contains(columns.getA().trim().toLowerCase())){
+                result = "VARCHAR(32)";
+                break;
+            }
+
             if(type.toUpperCase().contains(key)){
                 result = value;
             }
@@ -104,18 +119,19 @@ public class ParseUtil {
      * @param targetyu
      * @return
      */
-    public static String getCKTableName(String firstLine,String sourceyu, String targetyu) {
+    public static Tuple2<String, String> getCKTableName(String firstLine,String sourceyu, String targetyu) {
         String otn = getTableName(firstLine);
 
         // 只要名字
         String ttn = otn;
-        if(otn.contains(".")){
-            ttn = otn.split("\\.")[1];
-        }
+
+        String[] tableNameArrs = otn.split("\\.");
+        ttn = tableNameArrs[1];
         // 拼接表名
         ttn = "ads."+ sourceyu +"_" + ttn + "_mysql_" + targetyu;
         ttn = ttn.replaceAll("_vcm", "");
-        return ttn;
+
+        return new Tuple2<>(tableNameArrs[0] ,ttn);
     }
 
     public static String getMysqlTableName(String firstLine) {

@@ -39,7 +39,7 @@ public class CK2MysqlGenerator implements Generator{
             String firstLine = getFirstLine(ckSQL);
 
             // ck表名
-            String tableCKName = ParseUtil.getCKTableName(firstLine,sourceyu, targetyu);
+            Tuple2<String, String> ckTableName = ParseUtil.getCKTableName(firstLine, sourceyu, targetyu);
             // mysql表名
             String tableMysqlName = ParseUtil.getMysqlTableName(firstLine);
             // ck源表名
@@ -48,9 +48,9 @@ public class CK2MysqlGenerator implements Generator{
             List<Tuple2<String, String>> columns = ParseUtil.getColums(ckSQL);
 
             if(firstLine.toUpperCase().contains("VIEW")){
-                result = dealView(columns, tableCKName, tableMysqlName, tableName, pks, targetyu);
+                result = dealView(columns, ckTableName, tableMysqlName, tableName, pks, targetyu);
             }else if(firstLine.toUpperCase().contains("TABLE")){
-                result = dealTable(columns, tableCKName, tableMysqlName, tableName, pks, targetyu);
+                result = dealTable(columns, ckTableName, tableMysqlName, tableName, pks, targetyu);
             }
 
         } catch (Exception e) {
@@ -59,16 +59,16 @@ public class CK2MysqlGenerator implements Generator{
         return result;
     }
 
-    private String dealTable(List<Tuple2<String, String>> columns, String tableCKName, String tableMysqlName, String tableName, String pks, String targetyu) {
+    private String dealTable(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu) {
 
         StringBuffer sb = new StringBuffer();
-        String ckDDL = getCKDDL(tableCKName, columns, targetyu, tableMysqlName);
+        String ckDDL = getCKDDL(tableCKName.getB(), columns, targetyu, tableMysqlName);
         String mysqlDDL = getMYSQLDDL(tableMysqlName, columns, pks);
         String execShell = getExecShell(tableCKName,tableName, columns);
         sb.append(ckDDL + "\n");
         sb.append(mysqlDDL + "\n");
-        if(tableCKName.contains(".")){
-            sb.append("-- export_" + tableCKName.replaceAll("\\.","_") + ".sh\n");
+        if(tableCKName.getB().contains(".")){
+            sb.append("-- export_" + tableCKName.getB().replaceAll("\\.","_") + ".sh\n");
         }else{
             sb.append("-- export_ads_" + tableCKName + ".sh\n");
         }
@@ -82,15 +82,15 @@ public class CK2MysqlGenerator implements Generator{
      * 解析视图sql
      * @param columns
      */
-    private String dealView(List<Tuple2<String, String>> columns, String tableCKName, String tableMysqlName, String tableName, String pks, String targetyu) {
+    private String dealView(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu) {
         StringBuffer sb = new StringBuffer();
-        String ckDDL = getCKDDL(tableCKName, columns, targetyu, tableMysqlName);
+        String ckDDL = getCKDDL(tableCKName.getB(), columns, targetyu, tableMysqlName);
         String mysqlDDL = getMYSQLDDL(tableMysqlName, columns, pks);
-        String execShell = getExecShell(tableCKName,tableName, columns);
+        String execShell = getExecShell(tableCKName, tableName, columns);
         sb.append(ckDDL + "\n");
         sb.append(mysqlDDL + "\n");
-        if(tableCKName.contains(".")){
-            sb.append("-- export_" + tableCKName.replaceAll("\\.","_") + ".sh\n");
+        if(tableCKName.getB().contains(".")){
+            sb.append("-- export_" + tableCKName.getB().replaceAll("\\.","_") + ".sh\n");
         }else{
             sb.append("-- export_ads_" + tableCKName + ".sh\n");
         }
@@ -105,11 +105,11 @@ public class CK2MysqlGenerator implements Generator{
      * @param colums
      * @return
      */
-    private String getExecShell(String tableCKName, String tableName, List<Tuple2<String, String>> colums) {
+    private String getExecShell(Tuple2<String, String> tableCKName, String tableName, List<Tuple2<String, String>> colums) {
         StringBuffer sb = new StringBuffer();
         sb.append("#!/bin/bash\n" +
                 "\n" +
-                "target_table_name=\""+tableCKName+"\"\n" +
+                "target_table_name=\""+tableCKName.getB()+"\"\n" +
                 "source_table_name=\""+tableName+"\"\n" +
                 "\n" +
                 "opts=$@\n" +
@@ -171,23 +171,42 @@ public class CK2MysqlGenerator implements Generator{
                 sb.append(colums.get(i).getA() + ",\n");
             }
         }
+        if(!tableCKName.getA().toUpperCase().equals("DWD") && !tableCKName.getA().toUpperCase().equals("ADS")){
+            sb.append(
+                    "    from ${source_table_name}\n" +
+                            "    --where toDate(GMT_MODIFIED) >= toDate('${run_date}')\n" +
+                            "    limit ${start},10000\n" +
+                            ";\n" +
+                            "\"\n" +
+                            "\n" +
+                            "echo ${ck_sql1}\n" +
+                            "\n" +
+                            "clickhouse-client -u ${ck_username} --password ${ck_password} -h ${ck_host} -m --multiquery -q\"${ck_sql1}\"\n" +
+                            "\n" +
+                            "done\n" +
+                            "\n" +
+                            "#done\n" +
+                            "\n" +
+                            "echo \"[INFO] SUCCESS\"");
+        }else{
+            sb.append(
+                    "    from ${source_table_name}\n" +
+                            "    --where toDate(UPDATE_TIME) >= toDate('${run_date}')\n" +
+                            "    limit ${start},10000\n" +
+                            ";\n" +
+                            "\"\n" +
+                            "\n" +
+                            "echo ${ck_sql1}\n" +
+                            "\n" +
+                            "clickhouse-client -u ${ck_username} --password ${ck_password} -h ${ck_host} -m --multiquery -q\"${ck_sql1}\"\n" +
+                            "\n" +
+                            "done\n" +
+                            "\n" +
+                            "#done\n" +
+                            "\n" +
+                            "echo \"[INFO] SUCCESS\"");
+        }
 
-        sb.append(
-                "    from ${source_table_name}\n" +
-                "    --where toDate(UPDATE_TIME) >= toDate('${run_date}')\n" +
-                "    limit ${start},10000\n" +
-                ";\n" +
-                "\"\n" +
-                "\n" +
-                "echo ${ck_sql1}\n" +
-                "\n" +
-                "clickhouse-client -u ${ck_username} --password ${ck_password} -h ${ck_host} -m --multiquery -q\"${ck_sql1}\"\n" +
-                "\n" +
-                "done\n" +
-                "\n" +
-                "#done\n" +
-                "\n" +
-                "echo \"[INFO] SUCCESS\"");
         return sb.toString();
     }
 
@@ -197,7 +216,7 @@ public class CK2MysqlGenerator implements Generator{
         sb.append("CREATE TABLE "+tableMysqlName+"\n");
         sb.append("(\n");
         for (int i = 0; i < colums.size(); i++) {
-            sb.append(colums.get(i).getA().toLowerCase() +  " "+ParseUtil.mapping(colums.get(i).getB())+",\n");
+            sb.append(colums.get(i).getA().toLowerCase() +  " "+ParseUtil.mapping(colums.get(i), pks)+",\n");
         }
         sb.append("PRIMARY KEY " + pks.toLowerCase() + "\n");
         sb.append(")\n");
