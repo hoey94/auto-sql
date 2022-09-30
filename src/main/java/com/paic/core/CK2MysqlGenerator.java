@@ -2,6 +2,7 @@ package com.paic.core;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.paic.util.FileUtils;
 import com.paic.util.ParseUtil;
 import com.paic.util.Tuple2;
 import com.paic.util.VelocityUtils;
@@ -48,9 +49,9 @@ public class CK2MysqlGenerator implements Generator{
             List<Tuple2<String, String>> columns = ParseUtil.getColums(ckSQL);
 
             if(firstLine.toUpperCase().contains("VIEW")){
-                result = dealView(columns, ckTableName, tableMysqlName, tableName, pks, targetyu);
+                result = dealView(columns, ckTableName, tableMysqlName, tableName, pks, targetyu, sourceyu);
             }else if(firstLine.toUpperCase().contains("TABLE")){
-                result = dealTable(columns, ckTableName, tableMysqlName, tableName, pks, targetyu);
+                result = dealTable(columns, ckTableName, tableMysqlName, tableName, pks, targetyu, sourceyu);
             }
 
         } catch (Exception e) {
@@ -59,7 +60,7 @@ public class CK2MysqlGenerator implements Generator{
         return result;
     }
 
-    private String dealTable(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu) {
+    private String dealTable(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu, String sourceyu) {
 
         StringBuffer sb = new StringBuffer();
         String ckDDL = getCKDDL(tableCKName.getB(), columns, targetyu, tableMysqlName);
@@ -67,12 +68,19 @@ public class CK2MysqlGenerator implements Generator{
         String execShell = getExecShell(tableCKName,tableName, columns);
         sb.append(ckDDL + "\n");
         sb.append(mysqlDDL + "\n");
+        String writeDestTableName = null;
         if(tableCKName.getB().contains(".")){
+            writeDestTableName = "export_" + tableCKName.getB().replaceAll("\\.","_") + ".sh";
             sb.append("-- export_" + tableCKName.getB().replaceAll("\\.","_") + ".sh\n");
         }else{
+            writeDestTableName = "export_ads_" + tableCKName + ".sh";
             sb.append("-- export_ads_" + tableCKName + ".sh\n");
         }
         sb.append(execShell + "\n");
+
+        FileUtils.writeCKDDL(ckDDL, sourceyu, writeDestTableName);
+        FileUtils.writeMysqlDDL(mysqlDDL, sourceyu, writeDestTableName);
+        FileUtils.writeExportShell(execShell, sourceyu, writeDestTableName);
 
         return sb.toString();
     }
@@ -82,19 +90,26 @@ public class CK2MysqlGenerator implements Generator{
      * 解析视图sql
      * @param columns
      */
-    private String dealView(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu) {
+    private String dealView(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu, String sourceyu) {
         StringBuffer sb = new StringBuffer();
         String ckDDL = getCKDDL(tableCKName.getB(), columns, targetyu, tableMysqlName);
         String mysqlDDL = getMYSQLDDL(tableMysqlName, columns, pks);
         String execShell = getExecShell(tableCKName, tableName, columns);
         sb.append(ckDDL + "\n");
         sb.append(mysqlDDL + "\n");
+        String writeDestTableName = null;
         if(tableCKName.getB().contains(".")){
+            writeDestTableName = "export_" + tableCKName.getB().replaceAll("\\.","_") + ".sh";
             sb.append("-- export_" + tableCKName.getB().replaceAll("\\.","_") + ".sh\n");
         }else{
+            writeDestTableName = "export_ads_" + tableCKName + ".sh";
             sb.append("-- export_ads_" + tableCKName + ".sh\n");
         }
         sb.append(execShell + "\n");
+
+        FileUtils.writeCKDDL(ckDDL, sourceyu, writeDestTableName);
+        FileUtils.writeMysqlDDL(mysqlDDL, sourceyu, writeDestTableName);
+        FileUtils.writeExportShell(execShell, sourceyu, writeDestTableName);
 
         return sb.toString();
     }
