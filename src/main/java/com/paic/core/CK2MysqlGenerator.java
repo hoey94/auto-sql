@@ -235,7 +235,7 @@ public class CK2MysqlGenerator implements Generator{
 
             sb.append(
                     "    from ${source_table_name}\n" +
-                    "    --where toDate(GMT_MODIFIED) >= toDate('${run_date}')\n" +
+                    "    --where toDate(GMT_MODIFIED) >= toDate('${run_date}') -1\n" +
                     "    limit ${start},10000\n" +
                     ";\n"
             );
@@ -243,7 +243,7 @@ public class CK2MysqlGenerator implements Generator{
         }else if(database.equals("DWD")){
             sb.append(
                     "    from ${source_table_name}\n" +
-                            "    --where toDate(UPDATE_TIME) >= toDate('${run_date}')\n" +
+                            "    --where toDate(UPDATE_TIME) >= toDate('${run_date}') -1\n" +
                             "    limit ${start},10000\n" +
                             ";\n"
             );
@@ -251,7 +251,7 @@ public class CK2MysqlGenerator implements Generator{
         }else if(database.equals("ADS")){
             sb.append(
                     "    from ${source_table_name}\n" +
-                            "    --where toDate(UPDATE_TIME) >= toDate('${run_date}')\n" +
+                            "    --where toDate(UPDATE_TIME) >= toDate('${run_date}') -1\n" +
                             "    limit ${start},10000\n" +
                             ";\n"
             );
