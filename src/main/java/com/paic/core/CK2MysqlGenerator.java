@@ -2,10 +2,7 @@ package com.paic.core;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.paic.util.FileUtils;
-import com.paic.util.ParseUtil;
-import com.paic.util.Tuple2;
-import com.paic.util.VelocityUtils;
+import com.paic.util.*;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -13,6 +10,7 @@ import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author zyh
@@ -63,8 +61,8 @@ public class CK2MysqlGenerator implements Generator{
     private String dealTable(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu, String sourceyu) {
 
         StringBuffer sb = new StringBuffer();
-        String ckDDL = getCKDDL(tableCKName.getB(), columns, targetyu, tableMysqlName);
-        String mysqlDDL = getMYSQLDDL(tableMysqlName, columns, pks);
+        String ckDDL = getCKDDL(tableCKName, columns, targetyu, tableMysqlName);
+        String mysqlDDL = getMYSQLDDL(tableCKName, tableMysqlName, columns, pks);
         String execShell = getExecShell(tableCKName,tableName, columns);
         sb.append(ckDDL + "\n");
         sb.append(mysqlDDL + "\n");
@@ -92,8 +90,8 @@ public class CK2MysqlGenerator implements Generator{
      */
     private String dealView(List<Tuple2<String, String>> columns, Tuple2<String, String> tableCKName, String tableMysqlName, String tableName, String pks, String targetyu, String sourceyu) {
         StringBuffer sb = new StringBuffer();
-        String ckDDL = getCKDDL(tableCKName.getB(), columns, targetyu, tableMysqlName);
-        String mysqlDDL = getMYSQLDDL(tableMysqlName, columns, pks);
+        String ckDDL = getCKDDL(tableCKName, columns, targetyu, tableMysqlName);
+        String mysqlDDL = getMYSQLDDL(tableCKName, tableMysqlName, columns, pks);
         String execShell = getExecShell(tableCKName, tableName, columns);
         sb.append(ckDDL + "\n");
         sb.append(mysqlDDL + "\n");
@@ -175,57 +173,96 @@ public class CK2MysqlGenerator implements Generator{
                 "  end=$[i+10000]\n" +
                 "  echo \"当前条数${start},10000\"\n" +
                 "\n" +
-                "  ck_sql1=\"\n" +
+                "  ck_sql1=\"\n" );
+
+
+        // 获取拼接的SQL
+        String database = tableCKName.getA().trim().toUpperCase();
+        if(ObjectUtil.isEmpty(database)){
+            database = "DWD";
+        }
+        String sql = getExecSql(database, colums);
+
+        sb.append(sql);
+        sb.append(
+                "\"\n" +
+                        "\n" +
+                        "echo ${ck_sql1}\n" +
+                        "\n" +
+                        "clickhouse-client -u ${ck_username} --password ${ck_password} -h ${ck_host} -m --multiquery -q\"${ck_sql1}\"\n" +
+                        "\n" +
+                        "done\n" +
+                        "\n" +
+                        "#done\n" +
+                        "\n" +
+                        "echo \"[INFO] SUCCESS\"");
+
+        return sb.toString();
+    }
+
+
+
+
+    private String getExecSql(String database, List<Tuple2<String, String>> colums) {
+
+        StringBuffer sb = new StringBuffer();
+
+        sb.append(
                 "    insert into ${target_table_name}\n" +
-                "    select\n" );
+                "    select\n"
+        );
 
         for (int i = 0; i < colums.size(); i++) {
+
             if(colums.size()-1 == i){
                 sb.append(colums.get(i).getA() +"\n");
             }else{
                 sb.append(colums.get(i).getA() + ",\n");
             }
         }
-        if(!tableCKName.getA().toUpperCase().equals("DWD") && !tableCKName.getA().toUpperCase().equals("ADS")){
+
+        // 导出的表是 接入层
+        if(!database.equals("DWD") && !database.equals("ADS")){
+
+            // 监测到字段中存在GMT时间
+            if(ColumnUtils.checkGMTFlag(colums)){
+                sb.append(
+                        "    ,now() AS CREATE_TIME,\n" +
+                                "GMT_MODIFIED AS UPDATE_TIME,\n" +
+                                "CASE WHEN OP_TYPE = 'D' then 1 else 0 end AS IS_DELETE\n"
+                );
+            }
+
             sb.append(
                     "    from ${source_table_name}\n" +
-                            "    --where toDate(GMT_MODIFIED) >= toDate('${run_date}')\n" +
-                            "    limit ${start},10000\n" +
-                            ";\n" +
-                            "\"\n" +
-                            "\n" +
-                            "echo ${ck_sql1}\n" +
-                            "\n" +
-                            "clickhouse-client -u ${ck_username} --password ${ck_password} -h ${ck_host} -m --multiquery -q\"${ck_sql1}\"\n" +
-                            "\n" +
-                            "done\n" +
-                            "\n" +
-                            "#done\n" +
-                            "\n" +
-                            "echo \"[INFO] SUCCESS\"");
-        }else{
+                    "    --where toDate(GMT_MODIFIED) >= toDate('${run_date}')\n" +
+                    "    limit ${start},10000\n" +
+                    ";\n"
+            );
+            // 导出的表是DWD
+        }else if(database.equals("DWD")){
             sb.append(
                     "    from ${source_table_name}\n" +
                             "    --where toDate(UPDATE_TIME) >= toDate('${run_date}')\n" +
                             "    limit ${start},10000\n" +
-                            ";\n" +
-                            "\"\n" +
-                            "\n" +
-                            "echo ${ck_sql1}\n" +
-                            "\n" +
-                            "clickhouse-client -u ${ck_username} --password ${ck_password} -h ${ck_host} -m --multiquery -q\"${ck_sql1}\"\n" +
-                            "\n" +
-                            "done\n" +
-                            "\n" +
-                            "#done\n" +
-                            "\n" +
-                            "echo \"[INFO] SUCCESS\"");
+                            ";\n"
+            );
+            // 导出的表是ADS
+        }else if(database.equals("ADS")){
+            sb.append(
+                    "    from ${source_table_name}\n" +
+                            "    --where toDate(UPDATE_TIME) >= toDate('${run_date}')\n" +
+                            "    limit ${start},10000\n" +
+                            ";\n"
+            );
         }
 
         return sb.toString();
     }
 
-    private String getMYSQLDDL(String tableMysqlName, List<Tuple2<String, String>> colums, String pks) {
+    private String getMYSQLDDL(Tuple2<String, String> tableCKName, String tableMysqlName, List<Tuple2<String, String>> colums, String pks) {
+        String database = tableCKName.getA().trim().toUpperCase();
+
         StringBuffer sb = new StringBuffer();
         sb.append("DROP TABLE IF EXISTS "+tableMysqlName+";\n");
         sb.append("CREATE TABLE "+tableMysqlName+"\n");
@@ -233,15 +270,21 @@ public class CK2MysqlGenerator implements Generator{
         for (int i = 0; i < colums.size(); i++) {
             sb.append(colums.get(i).getA().toLowerCase() +  " "+ParseUtil.mapping(colums.get(i), pks)+",\n");
         }
+        if(!database.equals("DWD") && !database.equals("ADS") && ColumnUtils.checkGMTFlag(colums)){
+            sb.append("create_time               DATETIME                 NULL COMMENT 'clickhouse中字段创建时间',\n" +
+                    "update_time               DATETIME                 NULL COMMENT 'clickhouse中字段创建时间',\n" +
+                    "is_delete                 INT(8)       DEFAULT 0   NULL COMMENT '是否删除,0:否，1:是',\n");
+        }
+
         sb.append("PRIMARY KEY " + pks.toLowerCase() + "\n");
         sb.append(")\n");
         return sb.toString();
     }
 
-    private String getCKDDL(String tableCKName, List<Tuple2<String, String>> colums, String targetyu, String tableMysqlName) {
+    private String getCKDDL(Tuple2<String, String> tableCKName, List<Tuple2<String, String>> colums, String targetyu, String tableMysqlName) {
         StringBuffer sb = new StringBuffer();
-        sb.append("DROP TABLE IF EXISTS " + tableCKName + ";\n");
-        sb.append("CREATE TABLE " + tableCKName + "\n");
+        sb.append("DROP TABLE IF EXISTS " + tableCKName.getB() + ";\n");
+        sb.append("CREATE TABLE " + tableCKName.getB() + "\n");
         sb.append("(\n");
         for (int i = 0; i < colums.size(); i++) {
             if (colums.size() - 1 == i) {
@@ -249,6 +292,15 @@ public class CK2MysqlGenerator implements Generator{
             } else {
                 sb.append(colums.get(i).getA() + " " + colums.get(i).getB() + ",\n");
             }
+        }
+        String database = tableCKName.getA().trim().toUpperCase();
+        // 导出的表是 接入层
+        if(!database.equals("DWD") && !database.equals("ADS") && ColumnUtils.checkGMTFlag(colums)){
+            sb.append(
+                    ",CREATE_TIME Nullable(DateTime),\n" +
+                    "UPDATE_TIME Nullable(DateTime),\n" +
+                    "IS_DELETE Int8\n");
+            // 导出的表是DWD
         }
         String engineConfig = getMysqlEngine(targetyu, tableMysqlName);
         sb.append(")" + engineConfig + "\n");

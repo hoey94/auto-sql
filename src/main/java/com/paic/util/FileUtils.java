@@ -9,10 +9,11 @@ import cn.hutool.core.io.FileUtil;
  */
 public class FileUtils {
 
-    /**
-     * 只涉及代码，不涉及调度
-     */
-    private static final String basePath = "/Users/zyh/workspace/travel-service-pipeline/apps_test";
+//    /**
+//     * 只涉及代码，不涉及调度
+//     */
+//    private static final String basePath = "/Users/zyh/workspace/travel-service-pipeline/apps";
+    private static final String basePath = "D:/work/Java/IdeaProjects/travel-service-pipeline/apps";
 
     public static String getFullPath(String sourceyu, SqlTypeEnum type, String fileName){
         StringBuffer sb = new StringBuffer();
