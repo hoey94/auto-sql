@@ -21,6 +21,7 @@ public class ParseUtil {
         typeMapping.put("INT", "INT");
         typeMapping.put("DATE", "DATETIME");
         typeMapping.put("DECIMAL", "DECIMAL(12,2)");
+        typeMapping.put("FLOAT", "DECIMAL(12,2)");
         return typeMapping;
     }
 
